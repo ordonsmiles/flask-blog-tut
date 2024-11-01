@@ -20,10 +20,10 @@ def get_db_connection():
     #return the connection object
     return conn
 
-    # function to retrieve a post from the database
+# Function to retrieve a post from the database
 def get_post(post_id):
     conn = get_db_connection()
-    post = conn.execute('SELECT * FROM posts WHERE id = ?', (post_id)).fetchone()
+    post = conn.execute('SELECT * FROM posts WHERE id = ?', (post_id,)).fetchone()
     conn.close()
 
     if post is None:
@@ -81,6 +81,7 @@ def edit(id):
     post = get_post(id)
 
     # determine if the page was requested with GET or POST
+    # if POST, process the form data, get the data then validate it, update the post and redirect to the homepage
     if request.method == 'POST':
         # get the title and content
         title = request.form['title']
@@ -93,7 +94,6 @@ def edit(id):
             flash('Content is required')
         else:
             conn = get_db_connection()
-            
             conn.execute('UPDATE posts SET title = ?, content = ? WHERE id = ?', (title, content, id))
             conn.commit()
             conn.close()
@@ -101,9 +101,31 @@ def edit(id):
             # redirect to home page
             return redirect(url_for('index'))
 
-    # if POST, process the form data, get the data then validate it, update the post and redirect to the homepage
-
     # if GET, then display page
     return render_template('edit.html', post=post)
+
+# create a route to delete a post
+# delete page will only be processed with a POST method
+# the post id is the url parameter 
+@app.route('/<int:id>/delete', methods=('POST',))
+def delete(id):
+    # get the post
+    post = get_post(id)
+
+    # connect to db
+    conn = get_db_connection()
+
+    # execute a delete query 
+    conn.execute('DELETE from posts WHERE id = ?', (id,))
+
+    # commit and close the connection
+    conn.commit()
+    conn.close()
+
+    # flash a success message
+    flash('"{}" was successfully deleted!'.format(post['title']))
+
+    # redirect to homepage
+    return redirect(url_for('index'))
 
 app.run(port=5008)
